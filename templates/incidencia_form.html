@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if incidencia %}
+            Editar incidencia
+        {% else %}
+            Nueva incidencia
+        {% endif %}
+    </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<main>
+    <h1>
+        {% if incidencia %}
+            Editar incidencia
+        {% else %}
+            Crear Incidencias
+        {% endif %}
+    </h1>
+
+    {% if error %}
+        <p style="color: red; font-weight: bold;">{{ error }}</p>
+    {% endif %}
+    
+    <form method="POST">
+        <div>
+            <label for="titulo">Título</label><br>
+            <input 
+                type="text"
+                id="titulo"
+                name="titulo"
+                required
+                value="{{ incidencia['titulo'] if incidencia else '' }}"
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label for="descripcion">Descripción</label><br>
+            <textarea
+                id="descripcion"
+                name="descripcion"
+                rows="5"
+            >{{ incidencia['descripcion'] if incidencia else '' }}</textarea>
+        </div>
+
+        <br>
+
+        <div>
+            <label for="prioridad">Prioridad</label><br>
+            <select id="prioridad" name="prioridad">
+                <option value="baja" {% if incidencia and incidencia [ "prioridad" ] == "baja" %}selected{% endif %}>Baja</option>
+                <option value="media" {% if incidencia and incidencia [ "prioridad" ] == "media" %}selected{% endif %}>Media</option>
+                <option value="alta" {% if incidencia and incidencia [ "prioridad" ] == "alta" %}selected{% endif %}>Alta</option>
+                <option value="critica" {% if incidencia and incidencia [ "prioridad" ] == "critica" %}selected{% endif %}>Crítica</option>
+            </select>
+        </div>
+
+        <br>
+
+        {% if incidencia %}
+        <div>
+            <label for="estado">Estado</label><br>
+            <select id="estado" name="estado">
+                <option value="abierta" {% if incidencia[ "estado" ] == "abierta" %}selected{% endif %}>Abierta</option>
+                <option value="en progreso" {% if incidencia[ "estado" ] == "en progreso" %}selected{% endif %}>En progreso</option>
+                <option value="resuelta" {% if incidencia[ "estado" ] == "resuelta" %}selected{% endif %}>Resuelta</option>
+                <option value="cerrada" {% if incidencia[ "estado" ] == "cerrada" %}selected{% endif %}>Cerrada</option>
+            </select>
+        </div>
+
+        <br>
+        {% endif %}
+
+        <br>
+
+        <div>
+            <label for="origen">Origen</label><br>
+            <select id="origen" name="origen" required>
+                <option value="cliente" {% if incidencia and incidencia["origen"] == "cliente" %}selected{% endif %}>Cliente</option>
+                <option value="interno" {% if incidencia and incidencia["origen"] == "interno" %}selected{% endif %}>Interno</option>
+            </select>
+        </div>
+
+        <br>
+
+        <div id="campo_cliente">
+            <label for="nombre_cliente">Nombre del cliente</label><br>
+            <input 
+                type="text"
+                id="nombre_cliente"
+                name="nombre_cliente"
+                value="{{ incidencia['nombre_cliente'] if incidencia and incidencia['nombre_cliente'] else '' }}"
+            >
+        </div>
+
+        <br>
+
+        <div id="campo_legajo">
+            <label for="legajo">Legajo</label><br>
+            <input
+                type="text"
+                id="legajo"
+                name="legajo"
+                value="{{ incidencia['legajo'] if incidencia and incidencia['legajo'] else ''}}"
+            >
+        </div>
+
+        <div>
+            <label for="tiempo_estimado"><br>Tiempo estimado de resolución</label><br>
+            <input
+                type="text"
+                id="tiempo_estimado"
+                name="tiempo_estimado"
+                placeholder="Ej: 4 horas, 1 día"
+                value="{{ incidencia['tiempo_estimado'] if incidencia else '' }}"
+            >
+        </div>
+
+        <br>
+
+        <div>
+            <label for="fecha_limite">Fecha límite</label><br>
+
+            {% if incidencia %}
+                <input 
+                    type="text"
+                    id="fecha_limite"
+                    value="{{ incidencia['fecha_limite'] or '' }}"
+                    readonly
+                >
+                <p style="margin: 5px 0 0; font-size: 12px; color: #666;">
+                    La fecha límite no se puede editar directamente. A futuro se modificará mediante solicitud de prórroga.
+                </p>
+            {% else %}
+                <input 
+                    type="datetime-local"
+                    id="fecha_limite"
+                    name="fecha_limite"
+                    value="{{ incidencia['fecha_limite'] if incidencia and incidencia['fecha_limite'] else '' }}"
+                >
+            {% endif %}
+        </div>
+
+        <br>
+
+        <button type="submit">
+            {% if incidencia %}
+                Guardar cambios
+            {% else %}
+                Guardar incidencia
+            {% endif %}
+        </button>
+    </form>
+
+    <br>
+
+    <a href="{{ url_for('index') }}">Volver al listado</a>
+</main>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

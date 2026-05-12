@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de incidencia</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css')}}">
+</head>
+
+<body>
+
+    <main>
+        <h1>Detalle de incidencia</h1>
+
+        <p><strong>ID:</strong> {{ incidencia["id"] }}</p>
+        <p><strong>Título:</strong> {{ incidencia["titulo"] }}</p>
+        <p><strong>Estado:</strong> {{ incidencia["estado"] }}</p>
+        <p><strong>Prioridad:</strong> {{ incidencia["prioridad"] }}</p>
+        <p><strong>Origen:</strong> {{ incidencia["origen"] }}</p>
+        <p><strong>Identificación:</strong>
+            {% if incidencia["origen"] == "cliente" %}
+            {{ incidencia["nombre_cliente"] or "-"}}
+            {% else %}
+            {{ incidencia["legajo"] or "-" }}
+            {% endif %}
+        </p>
+
+        <hr>
+        <!--ASISTENTE EN RESOLUCION DE INCIDENCIAS-->
+        <h2> Sugerencias del "Asistente de resolución" </h2>
+
+        <ul>
+            {% for s in sugerencias %}
+            <li>{{ s }}</li>
+            {% endfor %}
+        </ul>
+
+        {% if mostrar_ia %}
+        <hr>
+
+        <h3> Ecalamiento avanzado </h3>
+
+        <a href="#" style="
+            background-color: #5e47f3;
+            color: black;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;  
+        ">
+            ANALIZAR CON IA
+        </a>
+        {% endif %}
+
+        <hr>
+
+        <p><strong>Fecha de creación:</strong> {{ incidencia["fecha_creacion"] }}</p>
+        <p><strong>Ultima actualización:</strong> {{ incidencia["fecha_actualizacion"] }}</p>
+        <p><strong>tiempo estimado:</strong> {{ incidencia["tiempo_estimado"] or "No definido" }}</p>
+        <p><strong>Fecha límite:</strong> {{ incidencia["fecha_limite"] or "No definda" }}</p>
+        <span {% if incidencia.alerta_vencimiento=="vencida" %} style="color:red; font-weight:bold;" {% elif
+            incidencia.alerta_vencimiento=="por_vencer" %} style="color:orange; font-weight:bold;" {% elif
+            incidencia.alerta_vencimiento=="en_tiempo" %} style="color:green; font-weight:bold;" {% endif %}>
+            {{ incidencia.alerta_vencimiento }}
+        </span>
+
+        <hr>
+
+        <h2>Solicitar prórroga</h2>
+
+        <form method="POST" action="{{ url_for('solicitar_prorroga', incidencia_id=incidencia['id']) }}">
+            <div>
+                <label for="nueva_fecha_limite">Nueva fecha límite</label><br>
+                <input type="datetime-local" id="nueva_fecha_limite" name="nueva_fecha_limite" required>
+            </div>
+
+            <br>
+
+            <div>
+                <label for="motivo">Motivo</label><br>
+                <textarea id="motivo" name="motivo" rows="4" cols="60" required></textarea>
+            </div>
+
+            <br>
+
+            <button type="submit">Solicitar prórroga</button>
+        </form>
+
+        <h2>Descripción</h2>
+        <p>{{ incidencia["descripcion"] or "Sin descripción." }}</p>
+
+        <hr>
+
+        <h2>Agregar comentario</h2>
+
+        <form method="POST" action="{{ url_for('agregar_comentario', incidencia_id=incidencia['id']) }}">
+            <textarea name="contenido" rows="4" cols="60" required></textarea>
+            <br><br>
+            <button type="submit">Guardar comentario</button>
+        </form>
+
+        <hr>
+
+        <h2>Historial de prórrogas</h2>
+
+        {% if prorrogas %}
+        <ul>
+            {% for prorroga in prorrogas %}
+            <li>
+                <p><strong>Fecha anterior:</strong> {{ prorroga["fecha_limite_anterior"] }}</p>
+                <p><strong>Nueva fecha solicitada:</strong> {{ prorroga["nueva_fecha_limite"] }}</p>
+                <p><strong>Motivo:</strong> {{ prorroga["motivo"] }}</p>
+                <p><strong>Estado:</strong> {{ prorroga["estado"] }}</p>
+                <small>solicitada el {{ prorroga["fecha_solicitud"] }}</small>
+
+                <br><br>
+
+                {% if prorroga["estado"] == "pendiente" %}
+                <a href="{{ url_for('aprobar_prorroga', prorroga_id=prorroga['id'] )}}">
+                    Aprobar
+                </a>
+                |
+                <a href="{{ url_for('rechazar_prorroga', prorroga_id=prorroga['id'] )}}">
+                    Rechazar
+                </a>
+                {% endif %}
+
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No hay prórrogas solicitadas.</p>
+        {% endif %}
+
+        <hr>
+
+        <h2>Comentarios</h2>
+
+        {% if comentarios %}
+        <ul>
+            {% for comentario in comentarios %}
+            <li>
+                <p>{{ comentario["contenido"] }}</p>
+                <small>{{ comentario["fecha_creacion"] }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No hay comentarios todavia.</p>
+        {% endif %}
+
+        <hr>
+
+        <a href="{{ url_for('index') }}">Volver al listado</a>
+        |
+        <a href="{{ url_for('editar', incidencia_id=incidencia['id']) }}">Editar</a>
+    </main>
+
+</body>
+
+</html>

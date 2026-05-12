@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Histórico de incidencias</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<main>
+
+    <h1>Histórico de incidencias</h1>
+
+    <hr>
+
+    <form method="GET">
+
+        <input type="text"
+               name="q"
+               placeholder="Buscar incidencia"
+               value="{{ search_text }}">
+
+        <select name="estado">
+            <option value="">Todos los estados</option>
+
+            <option value="resuelta"
+                {% if estado_actual == "resuelta" %}selected{% endif %}>
+                Resuelta
+            </option>
+
+            <option value="cerrada"
+                {% if estado_actual == "cerrada" %}selected{% endif %}>
+                Cerrada
+            </option>
+        </select>
+
+        <select name="prioridad">
+            <option value="">Todas las prioridades</option>
+
+            <option value="baja"
+                {% if prioridad_actual == "baja" %}selected{% endif %}>
+                Baja
+            </option>
+
+            <option value="media"
+                {% if prioridad_actual == "media" %}selected{% endif %}>
+                Media
+            </option>
+
+            <option value="alta"
+                {% if prioridad_actual == "alta" %}selected{% endif %}>
+                Alta
+            </option>
+
+            <option value="critica"
+                {% if prioridad_actual == "critica" %}selected{% endif %}>
+                Crítica
+            </option>
+        </select>
+
+        <button type="submit">Filtrar</button>
+
+        <a href="{{ url_for('historico') }}">
+            Limpiar
+        </a>
+
+    </form>
+
+    <br>
+
+    <a class="btn-exportar"
+       href="{{ url_for('index') }}">
+        ← Volver al panel principal
+    </a>
+
+    <hr>
+
+    {% if incidencias %}
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Estado</th>
+                <th>Prioridad</th>
+                <th>Origen</th>
+                <th>Fecha límite</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for inc in incidencias %}
+
+            <tr>
+
+                <td>{{ inc["id"] }}</td>
+
+                <td>
+                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc['id']) }}">
+                        {{ inc["titulo"] }}
+                    </a>
+                </td>
+
+                <td>{{ inc["estado"] }}</td>
+
+                <td>{{ inc["prioridad"] }}</td>
+
+                <td>{{ inc["origen"] }}</td>
+
+                <td>{{ inc["fecha_limite"] }}</td>
+
+                <td>
+                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc['id']) }}">
+                        Ver detalle
+                    </a>
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+    {% else %}
+
+        <div style="
+            margin: 25px auto;
+            padding: 15px;
+            max-width: 600px;
+            background: #f5f5f5;
+            border-left: 5px solid #999;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        ">
+            No hay incidencias históricas.
+        </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>
