@@ -141,7 +141,7 @@ def dashboard():
             vencidas += 1
         elif inc["alerta_vencimiento"] == "por_vencer":
             por_vencer += 1
-        elif inc["en_tiempo"] == "en_tiempo":
+        elif inc["alerta_vencimiento"] == "en_tiempo":
             en_tiempo += 1
 
         if inc["origen"] == "cliente":
