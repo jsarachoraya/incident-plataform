@@ -1,18 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Histórico de incidencias</title>
+{% extends "base.html" %}
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
-</head>
+{% block title %}Histórico{% endblock %}
 
-<body>
+{% block content %}
 
 <main>
 
-    <h1>Histórico de incidencias</h1>
+    <h1 style="text-align: center;">Histórico de incidencias</h1>
 
     <hr>
 
@@ -99,29 +93,21 @@
             {% for inc in incidencias %}
 
             <tr>
-
-                <td>{{ inc["id"] }}</td>
-
+                <td>{{ inc.id }}</td>
                 <td>
-                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc['id']) }}">
-                        {{ inc["titulo"] }}
+                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc.id) }}">
+                        {{ inc.titulo }}
                     </a>
                 </td>
-
-                <td>{{ inc["estado"] }}</td>
-
-                <td>{{ inc["prioridad"] }}</td>
-
-                <td>{{ inc["origen"] }}</td>
-
-                <td>{{ inc["fecha_limite"] }}</td>
-
+                <td>{{ inc.estado }}</td>
+                <td>{{ inc.prioridad }}</td>
+                <td>{{ inc.origen }}</td>
+                <td>{{ inc.fecha_limite }}</td>
                 <td>
-                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc['id']) }}">
+                    <a href="{{ url_for('detalle_incidencia', incidencia_id=inc.id) }}">
                         Ver detalle
                     </a>
                 </td>
-
             </tr>
 
             {% endfor %}
@@ -149,5 +135,4 @@
 
 </main>
 
-</body>
-</html>
+{% endblock %}

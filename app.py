@@ -1,33 +1,17 @@
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from flask import jsonify, send_file
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, url_for, Response, flash
 import csv
 from io import StringIO, BytesIO
 from flask import Response, session 
 from datetime import datetime
 from models.incidencia import (
-    create_table,
-    get_all_incidencias,
-    get_incidencia_by_id,
-    create_incidencia,
-    update_incidencia,
-    delete_incidencia,
-    search_incidencias,
-    filter_incidencias,
-    create_comentarios_table,
-    get_comentarios_by_incidencia_id,
-    create_comentario,
-    get_alerta_vencimiento,
-    count_comentarios_by_incidencia_id,
-    create_prorrogas_table,
-    create_prorroga,
-    get_prorrogas_by_incidencia_id,
-    get_connection,
-    filter_incidencias_activas,
-    filter_incidencias_historicas,
-    crate_usuarios_table,
-    seed_admin,
+    create_table, get_all_incidencias, get_incidencia_by_id, create_incidencia, update_incidencia, delete_incidencia,
+    search_incidencias, filter_incidencias, create_comentarios_table, get_comentarios_by_incidencia_id,
+    create_comentario, get_alerta_vencimiento, count_comentarios_by_incidencia_id, create_prorrogas_table,
+    create_prorroga, get_prorrogas_by_incidencia_id, get_connection, filter_incidencias_activas,
+    filter_incidencias_historicas, crate_usuarios_table, seed_admin,
 )
 
 app = Flask (__name__)
@@ -64,7 +48,7 @@ def index():
 
     incidencias = filter_incidencias_activas(search_text, estado, prioridad)
 
-    print("TOTAL DESDE DB:", len(incidencias))
+
 
     incidencias_con_alerta = []
 
@@ -128,6 +112,63 @@ def index():
         abiertas=abiertas,
     )
 
+
+@app.route("/dashboard")
+def dashboard():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    incidencias = filter_incidencias_activas("", "", "")
+
+    incidencias_con_alerta = []
+
+    for inc in incidencias:
+        inc_dict = dict(inc)
+        inc_dict["alerta_vencimiento"] = get_alerta_vencimiento(inc_dict)
+        incidencias_con_alerta.append(inc_dict)
+
+    vencidas = 0
+    por_vencer = 0
+    en_tiempo = 0
+    cliente = 0
+    interno = 0
+    criticas = 0
+    abiertas = 0
+
+    for inc in incidencias_con_alerta:
+        if inc["alerta_vencimiento"] == "vencida":
+            vencidas += 1
+        elif inc["alerta_vencimiento"] == "por_vencer":
+            por_vencer += 1
+        elif inc["en_tiempo"] == "en_tiempo":
+            en_tiempo += 1
+
+        if inc["origen"] == "cliente":
+            cliente += 1
+        elif inc["origen"] == "interno":
+            interno += 1
+
+        if inc["prioridad"] == "critica":
+            criticas += 1
+        
+        if inc["estado"]  == "abierta":
+            abiertas += 1
+
+    total_incidencias = len(incidencias_con_alerta)
+    
+    return render_template(
+        "dashboard.html",
+        vencidas=vencidas,
+        por_vencer=por_vencer,
+        en_tiempo=en_tiempo,
+        cliente=cliente,
+        interno=interno,
+        criticas=criticas,
+        abiertas=abiertas,
+        total_incidencias=total_incidencias  
+    )
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////#
 ########################################## LOGIN/LOGOUT #################################################
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
@@ -145,7 +186,7 @@ def login():
 
         cursor.execute("""
             SELECT * FROM usuarios
-            WHERE username = ? AND password = ?
+            WHERE username = %s AND password = %s
         """, (username, password))
 
         usuario = cursor.fetchone()
@@ -188,6 +229,12 @@ def historico():
     per_page = 50
 
     incidencias = filter_incidencias_historicas(search_text, estado, prioridad)
+
+    print("HISTORICO", incidencias)
+
+    if incidencias:
+        print("TIPO PRIMERA:", type(incidencias[0]))
+        print("PRIMERA:", incidencias[0])
 
     incidencias_con_alerta = []
 
@@ -523,6 +570,14 @@ def agregar_comentario(incidencia_id):
 
 @app.route("/crear", methods=["GET", "POST"])
 def crear():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    if session["rol"] not in ["admin", "operador"]:
+        flash("No tiene permiso para realizar esta accion", "warning")
+        return redirect(url_for("index"))
+    
     if request.method == "POST":
         titulo = request.form["titulo"]
         descripcion = request.form["descripcion"]
@@ -551,6 +606,7 @@ def crear():
             tiempo_estimado,
             fecha_limite
         )
+        flash("Incidencia creada correctamente", "success")
         return redirect(url_for("index"))
     
     return render_template("incidencia_form.html", incidencia=None, error=None)
@@ -620,6 +676,7 @@ def editar(incidencia_id):
             tiempo_estimado,
             fecha_limite
         )
+        flash("Incidencia actualizada", "info")
         return redirect(url_for("index"))
     
     return render_template("incidencia_form.html", incidencia=incidencia, error=None)
@@ -660,7 +717,7 @@ def aprobar_prorroga(prorroga_id):
     cursor = conn.cursor()
 
     # Obtener prórroga
-    cursor.execute("SELECT * FROM prorrogas WHERE id = ?", (prorroga_id,))
+    cursor.execute("SELECT * FROM prorrogas WHERE id = %s", (prorroga_id,))
     prorroga = cursor.fetchone()
 
     if not prorroga:
@@ -670,14 +727,14 @@ def aprobar_prorroga(prorroga_id):
     cursor.execute("""
         UPDATE prorrogas
         SET estado = 'aprobada'
-        WHERE id = ?
+        WHERE id = %s
     """, (prorroga_id,))
 
     # Actualizar decha limite en incidencia
     cursor.execute("""
         UPDATE incidencias
-        SET fecha_limite = ?
-        WHERE id = ?
+        SET fecha_limite = %s
+        WHERE id = %s
     """, (prorroga["nueva_fecha_limite"], prorroga["incidencia_id"]))
 
     conn.commit()
@@ -697,7 +754,7 @@ def rechazar_prorroga(prorroga_id):
     cursor.execute("""
         UPDATE prorrogas
         SET estado = 'rechazada'
-        WHERE id = ?
+        WHERE id = %s
     """, (prorroga_id,))
 
     conn.commit()
@@ -711,7 +768,16 @@ def rechazar_prorroga(prorroga_id):
 
 @app.route("/eliminar/<int:incidencia_id>")
 def eliminar(incidencia_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    if session["rol"] not in ["admin", "operador"]:
+        flash("No tiene permiso para realizar esta accion", "warning")
+        return redirect(url_for("index"))
+    
     delete_incidencia(incidencia_id)
+    flash("Incidencia eliminada", "danger")
     return redirect(url_for("index"))
 
 if __name__== "__main__":

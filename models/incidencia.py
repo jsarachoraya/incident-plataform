@@ -1,12 +1,33 @@
+import os
 import sqlite3
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
   
+
+load_dotenv()
 
 DB_NAME = "database.db"
 
 def get_connection():
+        
+    db_type = os.getenv("DB_TYPE", "sqlite")
+
+    if db_type == "postgres":
+
+        import psycopg2
+        import psycopg2.extras
+
+        conn = psycopg2.connect(
+            os.getenv("DATABASE_URL"),
+            cursor_factory=psycopg2.extras.RealDictCursor
+        )
+        
+        return conn
+
     conn = sqlite3.connect(DB_NAME)
+
     conn.row_factory = sqlite3.Row
+
     return conn
 
 def create_table():
@@ -15,7 +36,7 @@ def create_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS incidencias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             titulo TEXT NOT NULL,
             descripcion TEXT,
             estado TEXT NOT NULL DEFAULT 'abierta',
@@ -51,15 +72,15 @@ def filter_incidencias(search_text, estado, prioridad):
     params = []
 
     if search_text:
-        query += " AND (titulo LIKE ? OR descripcion LIKE ?)"
+        query += " AND (titulo ILIKE %s OR descripcion ILIKE %s)"
         params.extend([f"%{search_text}%", f"%{search_text}%"])
 
     if estado:
-        query += " AND estado = ?"
+        query += " AND estado = %s"
         params.append(estado)
 
     if prioridad:
-        query += " AND prioridad = ?"
+        query += " AND prioridad = %s"
         params.append(prioridad)
 
     query += " ORDER BY id DESC"
@@ -74,7 +95,7 @@ def get_incidencia_by_id(incidencia_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM incidencias WHERE id = ?", (incidencia_id,))
+    cursor.execute("SELECT * FROM incidencias WHERE id = %s", (incidencia_id,))
     incidencia = cursor.fetchone()
 
     conn.close()
@@ -109,7 +130,7 @@ def create_incidencia(
             fecha_creacion,
             fecha_actualizacion
         )
-        VALUES (?, ?, 'abierta', ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, 'abierta', %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         titulo,
         descripcion,
@@ -145,17 +166,17 @@ def update_incidencia(
 
     cursor.execute("""
         UPDATE incidencias
-        SET titulo = ?,
-            descripcion = ?,
-            estado = ?,
-            prioridad = ?,
-            origen = ?,
-            nombre_cliente = ?,
-            legajo = ?,
-            tiempo_estimado = ?,
-            fecha_limite = ?,
-            fecha_actualizacion = ?
-        WHERE id = ?
+        SET titulo = %s,
+            descripcion = %s,
+            estado = %s,
+            prioridad = %s,
+            origen = %s,
+            nombre_cliente = %s,
+            legajo = %s,
+            tiempo_estimado = %s,
+            fecha_limite = %s,
+            fecha_actualizacion = %s
+        WHERE id = %s
     """, (
         titulo,
         descripcion,
@@ -177,7 +198,7 @@ def delete_incidencia(incidencia_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM incidencias WHERE id = ?", (incidencia_id,))
+    cursor.execute("DELETE FROM incidencias WHERE id = %s", (incidencia_id,))
 
     conn.commit()
     conn.close()
@@ -190,7 +211,7 @@ def search_incidencias(search_text):
 
     cursor.execute("""
         SELECT * FROM incidencias
-        WHERE titulo LIKE ? OR descripcion LIKE ?
+        WHERE titulo ILIKE %s OR descripcion ILIKE %s
         ORDER BY id DESC
     """, (query, query))
 
@@ -207,16 +228,16 @@ def filter_incidencias (search_text="", estado="", prioridad=""):
     params = []
 
     if search_text:
-        sql += " AND (titulo LIKE ? OR descripcion LIKE ?)"
+        sql += " AND (titulo ILIKE %s OR descripcion ILIKE %s)"
         query = f"%{search_text}%"    
         params.extend([query, query])
 
     if estado:
-        sql += " AND estado = ?"
+        sql += " AND estado = %s"
         params.append(estado)
 
     if prioridad:
-        sql += " AND prioridad = ?"
+        sql += " AND prioridad = %s"
         params.append(prioridad)
 
     sql += " ORDER BY id DESC"
@@ -234,26 +255,27 @@ def filter_incidencias_activas(search_text, estado, prioridad):
 
     query = """
         SELECT * FROM incidencias
-        WHERE estado IN ('resuelta', 'cerrada')
+        WHERE estado NOT IN ('resuelta', 'cerrada')
     """
     params = []
 
     if search_text:
-        query += " AND (titulo LIKE ? OR descripcion LIKE ?)"
+        query += " AND (titulo ILIKE %s OR descripcion ILIKE %s)"
         params.extend([f"%{search_text}%", f"%{search_text}%"])
 
     if estado:
-        query += " AND estado = ?"
+        query += " AND estado = %s"
         params.append(estado)
 
     if prioridad:
-        query += " AND prioridad = ?"
+        query += " AND prioridad = %s"
         params.append(prioridad)
 
     query += " ORDER BY id DESC"
 
     cursor.execute(query, params)
     resultados = cursor.fetchall()
+    
     conn.close()
 
     return resultados
@@ -270,23 +292,23 @@ def filter_incidencias_historicas(search_text, estado, prioridad):
     params = []
 
     if search_text:
-        query += " AND (titulo LIKE ? OR descripcion LIKE ?)"
+        query += " AND (titulo ILIKE %s OR descripcion ILIKE %s)"
         params.extend([f"%{search_text}%", f"%{search_text}%"])
 
     if estado:
-        query += " AND estado = ?"
+        query += " AND estado = %s"
         params.append(estado)
 
     if prioridad:
-        query += " AND prioridad = ?"
+        query += " AND prioridad = %s"
         params.append(prioridad)
 
     query += " ORDER BY id DESC"
 
     cursor.execute(query, params)
     resultados = cursor.fetchall()
+    
     conn.close()
-
     return resultados
 
 
@@ -297,7 +319,7 @@ def create_comentarios_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comentarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             incidencia_id INTEGER NOT NULL,
             contenido TEXT NOT NULL,
             fecha_creacion TEXT NOT NULL,
@@ -315,7 +337,7 @@ def get_comentarios_by_incidencia_id(incidencia_id):
 
     cursor.execute("""
         SELECT * FROM comentarios
-        WHERE incidencia_id = ?
+        WHERE incidencia_id = %s
         ORDER BY ID DESC
     """, (incidencia_id,))
 
@@ -336,7 +358,7 @@ def create_comentario(incidencia_id, contenido):
             contenido,
             fecha_creacion
         )
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (incidencia_id, contenido, now))
 
     conn.commit()
@@ -379,7 +401,7 @@ def count_comentarios_by_incidencia_id(incidencia_id):
     cursor.execute("""
         SELECT COUNT(*) as total
         FROM comentarios
-        WHERE incidencia_id = ?
+        WHERE incidencia_id = %s
     """, (incidencia_id,))
 
     result = cursor.fetchone()
@@ -393,7 +415,7 @@ def create_prorrogas_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS prorrogas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             incidencia_id INTEGER NOT NULL,
             fecha_limite_anterior TEXT NOT NULL,
             nueva_fecha_limite TEXT NOT NULL,
@@ -422,7 +444,7 @@ def create_prorroga(incidencia_id, fecha_limite_anterior, nueva_fecha_limite, mo
             motivo,
             fecha_solicitud
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
     """, (incidencia_id, fecha_limite_anterior, nueva_fecha_limite, motivo, now))
 
     conn.commit()
@@ -435,7 +457,7 @@ def get_prorrogas_by_incidencia_id(incidencia_id):
 
     cursor.execute("""
         SELECT * FROM prorrogas
-        WHERE incidencia_id = ?
+        WHERE incidencia_id = %s
         ORDER BY id DESC
     """, (incidencia_id,))
 
@@ -452,7 +474,7 @@ def crate_usuarios_table():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
             rol TEXT NOT NULL
@@ -469,7 +491,7 @@ def seed_admin():
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT * FROM usuarios WHERE username = ?",
+        "SELECT * FROM usuarios WHERE username = %s",
         ("admin",)
 
     )
@@ -480,7 +502,7 @@ def seed_admin():
     if not usuario:
         cursor.execute("""
             INSERT INTO usuarios (username, password, rol)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, ("admin", "admin123", "admin"))
 
     conn.commit()

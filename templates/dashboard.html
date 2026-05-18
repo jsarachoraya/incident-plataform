@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div>
+
+    <h1 style="text-align: center;">Dashboard operativo</h1>
+
+</div>
+<!------------------------------------------DESPLEGABLE RESUMEN OPERATIVO------------------------------------------>
+
+    
+    <div style="display: flex; justify-content: center; gap: 30px; margin-top: 25px; flex-wrap: wrap;">
+
+        <div class="graficos-dashboard">
+            <div class="grafico-card">
+                <h3>Distribución de incidencias</h3>
+                <canvas id="graficoEstado"></canvas>
+            </div>
+
+            <div class="grafico-card">
+                <h3>Origen de incidencias</h3>
+                <canvas id="graficoOrigen"></canvas>
+            </div>
+        </div>
+        <div class="kpi-dashboard">
+
+            <div class="kpi-card">
+                <span>Total incidencias</span>
+                <strong>{{ total_incidencias }}</strong>
+            </div>
+
+            <div class="kpi-card critica">
+                <span>Críticas</span>
+                <strong>{{ criticas }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Abiertas</span>
+                <strong>{{ abiertas }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Clientes</span>
+                <strong>{{ cliente }}</strong>
+            </div>
+
+            <div class="kpi-card">
+                <span>Internas</span>
+                <strong>{{ interno }}</strong>
+            </div>
+
+        </div>
+    </div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        fetch("/api/grafico_estado")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('graficoEstado');
+
+                if (!ctx) return;
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: "Cantidad",
+                            data: data.data,
+                            backgroundColor: [
+                                "#3498db", // ABIERTA
+                                "#f1c40f", // EN PROGRESO
+                                "#2ecc71", // RESUELTA
+                                "#f5a5a6" // CERRADA
+                            ],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: {
+                                position: "top",
+                                labels: {
+                                    color: "#ffffff"
+                                }
+                            }
+                        }
+                    }
+
+                });
+            });
+    </script>
+    <script>
+        fetch("/api/grafico_origen")
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById("graficoOrigen");
+
+                if (!ctx) return;
+
+                new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: "Cantidad",
+                            data: data.data
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: {
+                                position: "top",
+                                labels: {
+                                    color: "#ffffff"
+                                }
+                            }
+                        },
+
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: "#ffffff"
+                                },
+                                grid: {
+                                    color: "rgba(255,255,255,0.08)"
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: "#ffffff"
+                                },
+                                grid: {
+                                    color: "rgba(255,255,255,0.08)"
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+    </script>
+
+    <script>
+        setInterval(() => {
+            location.reload();
+        }, 60000);
+    </script>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+            <a class="btn-exportar"
+                href="{{ url_for('exportar_excel', q=search_text, estado=estado_actual, prioridad=prioridad_actual, alerta=alerta_actual) }}">
+                Exportar CSV
+            </a>
+        </div>
+
+{% endblock %}

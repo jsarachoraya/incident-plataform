@@ -37,7 +37,7 @@ for i in range(100):
             fecha_creacion,
             fecha_actualizacion
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """, (
         titulo,
         descrpcion,
@@ -55,4 +55,4 @@ for i in range(100):
 conn.commit()
 conn.close()
 
-print("Datos de prueba cargados")
+

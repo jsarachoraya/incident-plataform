@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+
+    <title>
+        {% block title %}Sistema{% endblock %}
+    </title>
+
+    <link rel="stylesheet" 
+          href="{{ url_for('static', filename='style.css') }}">
+    
+</head>
+
+<body>
+
+    {% if "usuario" in session %}
+
+    <div class="app-layout">
+
+        <aside class="sidebar">
+
+            <h2 class="sidebar-title">CRM Ops</h2>
+
+            <a href="{{ url_for('index') }}">Incidencias</a>
+            <a href="{{ url_for('historico') }}">Histórico</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+
+            <hr>
+
+            <span class="sidebar-section"><h2>Próximamente</b> </h2></span>
+            <a href="#">Clientes</a>
+            <a href="#">Pipeline</a>
+            <a href="#">Reportes</a>
+
+        </aside>
+
+        <main class="content-area">
+
+            <div class="topbar">
+                <div>
+                    {{ session["usuario"]}} | Rol: {{ session["rol"] }}
+                </div>
+
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    Cerrar sesión
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}
+            {% endblock %}
+
+        </main>
+
+    </div>
+
+    {% else %}
+
+        {% block content_login %}
+        {% endblock %}
+
+    {% endif %}
+    
+</body>
+</html>

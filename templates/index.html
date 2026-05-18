@@ -1,29 +1,10 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab App Training</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-
-<body>
+<div class="container">
     <main>
-        <div class="topbar">
-
-            <div>
-                {{ session["usuario"]}}
-                | Rol: {{ session["rol"] }}
-            </div>
-
-            <a href="{{ url_for('logout') }}"
-                class="logout-btn">
-                Cerrar sesión
-            </a>
-
-        </div>
-        <h1 style="color: white;">Sistema de Incidencias</h1>
+        <h1 style="color: white; text-align: center; ">Sistema de Incidencias</h1>
         <hr><br>
 
         <!------------------------------------------FILTROS DE BUSQUEDA------------------------------------------>
@@ -87,67 +68,17 @@
 
         <div class="acciones-superiores">
 
-            <a class="btn-principal" href="{{ url_for('crear') }}">
+            {% if session["rol"] in ["admin", "operador"] %}
+            <a class="btn-principal" 
+               href="{{ url_for('crear') }}">
                 + Nueva incidencia
             </a>
-
-            <a class="btn-secundario" href="{{ url_for('historico') }}">
-                Histórico
-            </a>
+            {% endif %}
 
         </div>
         <hr>
         {% if incidencias %}
-        <!------------------------------------------DESPLEGABLE RESUMEN OPERATIVO------------------------------------------>
-        <details class="dashboard-toggle">
-            <summary class="summary-dashboard">
-                Resumen operativo
-            </summary>
-
-            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 25px; flex-wrap: wrap;">
-
-                <div class="graficos-dashboard">
-                    <div class="grafico-card">
-                        <h3>Distribución de incidencias</h3>
-                        <canvas id="graficoEstado"></canvas>
-                    </div>
-
-                    <div class="grafico-card">
-                        <h3>Origen de incidencias</h3>
-                        <canvas id="graficoOrigen"></canvas>
-                    </div>
-                </div>
-                <div class="kpi-dashboard">
-
-                    <div class="kpi-card">
-                        <span>Total incidencias</span>
-                        <strong>{{ total_incidencias }}</strong>
-                    </div>
-
-                    <div class="kpi-card critica">
-                        <span>Críticas</span>
-                        <strong>{{ criticas }}</strong>
-                    </div>
-
-                    <div class="kpi-card">
-                        <span>Abiertas</span>
-                        <strong>{{ abiertas }}</strong>
-                    </div>
-
-                    <div class="kpi-card">
-                        <span>Clientes</span>
-                        <strong>{{ cliente }}</strong>
-                    </div>
-
-                    <div class="kpi-card">
-                        <span>Internas</span>
-                        <strong>{{ interno }}</strong>
-                    </div>
-
-                </div>
-            </div>
-        </details>
-        <hr>
+        
         <div
             style="display: flex; justify-content: center; gap: 20px; margin-top: 25px; margin-bottom: 25px; flex-wrap: wrap;">
 
@@ -215,27 +146,29 @@
                     <td class="{{ inc['alerta_vencimiento'] }}">
                         {{ inc["alerta_vencimiento"].replace("_", " ") }}</td>
                     <td>
+                    {% if session["rol"] in ["admin", "operador"] %}
                         {% if inc["estado"] != "cerrada" %}
-                        <a href="{{ url_for('editar', incidencia_id=inc['id']) }}">Editar</a>
+                        <a href="{{ url_for('editar', incidencia_id=inc['id']) }}">
+                            Editar
+                        </a>
                         {% else %}
                         <span style="color: gray;">Bloqueada</span>
                         {% endif %}
+
+                    {% endif %}
                         |
+                    {% if session["rol"] == "admin" %}
                         <a href="{{ url_for('eliminar', incidencia_id=inc['id']) }}"
                             onclick="return confirmarEliminacion();">
                             Eliminar
                         </a>
+                    {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-            <a class="btn-exportar"
-                href="{{ url_for('exportar_excel', q=search_text, estado=estado_actual, prioridad=prioridad_actual, alerta=alerta_actual) }}">
-                Exportar CSV
-            </a>
-        </div>
+        
         {% else %}
 
         <div style="
@@ -277,108 +210,8 @@
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <script>
-        fetch("/api/grafico_estado")
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('graficoEstado');
-
-                if (!ctx) return;
-
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: "Cantidad",
-                            data: data.data,
-                            backgroundColor: [
-                                "#3498db", // ABIERTA
-                                "#f1c40f", // EN PROGRESO
-                                "#2ecc71", // RESUELTA
-                                "#f5a5a6" // CERRADA
-                            ],
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        plugins: {
-                            legend: {
-                                position: "top",
-                                labels: {
-                                    color: "#ffffff"
-                                }
-                            }
-                        }
-                    }
-
-                });
-            });
-    </script>
-    <script>
-        fetch("/api/grafico_origen")
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById("graficoOrigen");
-
-                if (!ctx) return;
-
-                new Chart(ctx, {
-                    type: "bar",
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            label: "Cantidad",
-                            data: data.data
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-
-                        plugins: {
-                            legend: {
-                                position: "top",
-                                labels: {
-                                    color: "#ffffff"
-                                }
-                            }
-                        },
-
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: "#ffffff"
-                                },
-                                grid: {
-                                    color: "rgba(255,255,255,0.08)"
-                                }
-                            },
-                            y: {
-                                ticks: {
-                                    color: "#ffffff"
-                                },
-                                grid: {
-                                    color: "rgba(255,255,255,0.08)"
-                                }
-                            }
-                        }
-                    }
-                });
-            });
-    </script>
-
-    <script>
-        setInterval(() => {
-            location.reload();
-        }, 60000);
-    </script>
+    
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
-</body>
 
-</html>
+{% endblock %}
