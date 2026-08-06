@@ -1,0 +1,41 @@
+
+<div class="card bg-dark text-light mb-4">
+    <div class="card-body">
+
+        <h4>Crear oportunidad comercial</h4>
+
+        <form method="POST" action="{{ url_for('nueva_oportunidad', cliente_id=cliente['id']) }}">
+
+            <div class="row">
+
+                <div class="col-md-4 mb-3">
+                    <label>Producto</label>
+                    <select name="producto" class="form-select">
+                        <option value="Cuenta Corriente">Cuenta Corriente</option>
+                        <option value="Tarjeta Premium">Tarjeta Premium</option>
+                        <option value="Préstamo">Préstamo</option>
+                        <option value="Seguro">Seguro</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label>Monto estimado</label>
+                    <input type="number" name="monto_estimado" class="form-control" value="0">
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label>Descripción</label>
+                    <textarea name="descripcion" class="form-control"
+                        placeholder="Detalle de la oportunidad comercial"></textarea>
+                </div>
+
+            </div>
+
+            <button class="btn btn-primary">
+                Crear oportunidad
+            </button>
+
+        </form>
+
+    </div>
+</div>

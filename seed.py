@@ -52,6 +52,84 @@ for i in range(100):
         fecha_actualizacion
     ))
 
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        dni VARCHAR(20) UNIQUE NOT NULL,
+        nombre VARCHAR(100) NOT NULL,
+        apellido VARCHAR(100),
+        empresa VARCHAR(100),
+        email VARCHAR(120),
+        telefono VARCHAR(50),
+        sector VARCHAR(100),
+        estado_cliente VARCHAR(50) DEFAULT 'prospecto',
+        estado_riesgo VARCHAR(20) DEFAULT 'sin_evaluar',
+        motivo_riesgo TEXT,
+        puede_reingresar BOOLEAN DEFAULT TRUE,
+        prioridad_cliente VARCHAR(20) DEFAULT 'media',
+        notas TEXT,
+        fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS interacciones_cliente (
+        id SERIAL PRIMARY KEY,
+        cliente_id INTEGER NOT NULL,
+        tipo_interaccion VARCHAR(50),
+        descripcion TEXT,
+        resultado VARCHAR(100),
+        usuario VARCHAR(100),
+        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                   
+        FOREIGN KEY (cliente_id)
+        REFERENCES clientes(id)
+        ON DELETE CASCADE
+    )
+                   
+    """)
+    
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS pipeline_oportunidades (
+        id SERIAL PRIMARY KEY,
+        cliente_id INTEGER NOT NULL,
+        producto VARCHAR(100) NOT NULL,
+        etapa VARCHAR(50) DEFAULT 'prospecto',
+        monto_estimado NUMERIC(12,2) DEFAULT 0,
+        probabilidad INTEGER DEFAULT 10,
+        descripcion TEXT,
+        usuario VARCHAR(100),
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        FOREIGN KEY (cliente_id)
+        REFERENCES clientes(id)
+        ON DELETE CASCADE
+                   
+    )
+    """)
+
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS productos_cliente (
+        id SERIAL PRIMARY KER,
+        cliente_id INTEGER NOT NULL,
+        producto VARCHAR(100) NOT NULL,
+        estado_producto VARCHAR(50) DEFAULT 'actvo',
+        monto NUMERIC(12,2) DEFAULT 0,
+        fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        observaciones TEXT,
+                   
+        FOREIGN KEY (cliente_id)
+        REFERENCES clientes(id)
+        ON DELETE CASCADE
+                   
+    )
+
+    """)
+
 conn.commit()
 conn.close()
 

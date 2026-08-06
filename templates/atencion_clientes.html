@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="atencion-wrapper">
+
+    <div class="atencion-card">
+
+        <h1>Atención de Clientes</h1>
+
+        <form method="POST" action="{{ url_for('evaluar_cliente') }}">
+
+            <label>Buscar cliente</label>
+            <input type="text" name="dni" placeholder="DNI / CUIL / CUIT" required>
+
+            <label>Nombre</label>
+            <input type="text" name="nombre" placeholder="NOMBRE O RAZON SOCIAL">
+
+            <label>Apellido</label>
+            <input type="text" name="apellido">
+
+            <label>Teléfono</label>
+            <input type="text" name="telefono">
+
+            <label>Email</label>
+            <input type="email" name="email">
+
+            <div class="atencion-actions">
+                <button type="submit" class="atencion-btn buscar">
+                    Buscar
+                </button>
+
+                <a href="{{ url_for('nuevo_cliente') }}" class="atencion-btn nuevo">
+                    Nuevo cliente
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

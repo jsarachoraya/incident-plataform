@@ -8,71 +8,111 @@
         {% block title %}Sistema{% endblock %}
     </title>
 
-    <link rel="stylesheet" 
-          href="{{ url_for('static', filename='style.css') }}">
-    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 </head>
 
 <body>
 
     {% if "usuario" in session %}
 
-    <div class="app-layout">
+    <aside class="sidebar">
 
-        <aside class="sidebar">
+        <h2 class="sidebar-title">CRM Ops</h2>
 
-            <h2 class="sidebar-title">CRM Ops</h2>
-
-            <a href="{{ url_for('index') }}">Incidencias</a>
-            <a href="{{ url_for('historico') }}">Histórico</a>
-            <a href="{{ url_for('dashboard') }}">Dashboard</a>
-
-            <hr>
-
-            <span class="sidebar-section"><h2>Próximamente</b> </h2></span>
-            <a href="#">Clientes</a>
-            <a href="#">Pipeline</a>
-            <a href="#">Reportes</a>
-
-        </aside>
-
-        <main class="content-area">
-
-            <div class="topbar">
-                <div>
-                    {{ session["usuario"]}} | Rol: {{ session["rol"] }}
+        <span class="sidebar-section">Operaciones Clientes</span>
+        <a href="{{ url_for('atencion_clientes') }}">Atención rápida</a>
+        <div class="sidebar-dropdown">
+            <button type="button"
+                    class="sidebar-link sidebar-toggle"
+                    onclick="toggleComercialMenu()">
+                Panel Comercial
+            </button>
+            <div id="comercialMenu" class="sidebar-submenu">
+                <div class="sidebar-kpi">
+                    Fichas abiertas:
+                    <strong>{{ cantidad_abiertos }}</strong>
                 </div>
 
-                <a href="{{ url_for('logout') }}" class="logout-btn">
-                    Cerrar sesión
+                {% for cliente in clientes_abiertos %}
+                <a href="{{ url_for('panel_comercial', cliente_id=cliente['id']) }}" class="sidebar-cliente-link">
+                    • {{ cliente["nombre"] }}
                 </a>
+                {% endfor %}
+
+                <div class="sidebar-kpi">
+                    Clientes atendidos hoy:
+                    <strong>{{ cantidad_atendidos_hoy }}</strong>
+                </div>
+
+                {% for cliente in clientes_atendidos_hoy %}
+                <a href="{{ url_for('panel_comercial', cliente_id=cliente['id']) }}"
+                   class="sidebar-cliente-atendido">
+                    • {{ cliente["nombre"] }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <a href="{{ url_for('clientes') }}">Clientes</a>
+        <a href="{{ url_for('pipeline') }}">Pipeline</a>
+        <a href="#">Reportes</a>
+
+        <hr>
+
+        <span class="sidebar-section">Operaciones Internas</span>
+        <a href="{{ url_for('index') }}">Incidencias</a>
+        <a href="{{ url_for('historico') }}">Histórico</a>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('dashboard') }}"><b>GESTION NPS</b></a>
+        <a href="{{ url_for('dashboard') }}"><b>MARKETING</b></a>
+    </aside>
+
+    <main class="content-area">
+
+        <div class="topbar">
+            <div>
+                {{ session["usuario"]}} | Rol: {{ session["rol"] }}
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-container">
-                        {% for category, message in messages %}
-                            <div class="flash-message {{ category }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                Cerrar sesión
+            </a>
+        </div>
 
-            {% block content %}
-            {% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash-message {{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
 
-        </main>
-
-    </div>
-
+        {% block content %}
+        {% endblock %}
+    </main>
     {% else %}
 
-        {% block content_login %}
-        {% endblock %}
+    {% block content_login %}
+    {% endblock %}
 
     {% endif %}
-    
+
 </body>
+
+<script>
+
+    function toggleComercialMenu() {
+
+        const menu =
+            document.getElementById("comercialMenu");
+
+        menu.classList.toggle("open");
+    }
+
+</script>
+
 </html>

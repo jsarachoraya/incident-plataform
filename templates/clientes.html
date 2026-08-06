@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="panel-title">
+
+        <h3>Clientes</h3>
+
+    </div>
+
+    <table class="table table-dark table-hover">
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>DNI</th>
+                <th>Nombre y Apellido</th>
+                <th>Empresa</th>
+                <th>Estado</th>
+                <th>Riesgo</th>
+                <th>Prioridad</th>
+                <th class="acciones-columna">
+                    Acción
+                </th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+            
+            {% for c in clientes %}
+            
+                <tr>
+                    <td>{{ c["id"] }}</td>
+                    <td>{{ c["dni"] }}</td>
+                    <td>{{ c["nombre"] }} {{ c["apellido"] }}</td>
+                    <td>{{ c["empresa"] }}</td>
+                    <td>{{ c["estado_cliente"] }}</td>
+                    <td>{{ c["estado_riesgo"] }}</td>
+                    <td>{{ c["prioridad_cliente"] }}</td>
+
+                    <td class="acciones-columna">
+
+                        <div class="acciones-botones">
+                            <a href="{{ url_for('panel_comercial', cliente_id=c['id']) }}"
+                            class="crm-action-btn">
+                                Panel Comercial
+                            </a>
+
+                            <form method="POST"
+                                action="{{ url_for('archivar_cliente', cliente_id=c['id']) }}">
+
+                                <button type="submit"
+                                        class="crm-delete-btn">
+                                    Archivar
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

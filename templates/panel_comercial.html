@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<a href="{{ url_for('cerrar_ficha', cliente_id=cliente['id']) }}" class="btn btn-outline-danger btn-sm">
+    Cerrar ficha
+</a>
+
+<div class="panel-title-container">
+    <h3 class="panel-title">
+        Panel Comercial
+    </h3>
+</div>
+
+<div class="cliente-header-card">
+
+    <div class="dashboard-top-grid">
+
+        <div class="info-cliente-card">
+
+            <div class="cliente-identidad-card" onclick="abrirModalCliente()">
+
+                <span>Información del cliente</span>
+
+                <h2>{{ cliente["nombre"] }} {{ cliente["apellido"] }}</h2>
+
+                <p>
+                    DNI: {{ cliente["dni"] }} |
+                    Estado: {{ cliente["estado_cliente"] }} |
+                    Riesgo: {{ cliente["estado_riesgo"] }}
+                </p>
+
+                <div class="cliente-segmento-linea">
+                    <span>Segmento:</span>
+
+                    <strong class="segmento-badge {{ segmento.lower() }}">
+                        {{ segmento }}
+                    </strong>
+                </div>
+
+            </div>
+
+            <div class="info-stack">
+
+                <div class="cliente-kpi-card" onclick="abrirModalSaldo()">
+                    <span>Saldo total</span>
+                    <strong>${{ total_inversiones }}</strong>
+                </div>
+
+                <div class="cliente-kpi-card">
+
+                    <h2>
+                        Productos actuales:
+                        <strong>{{ cantidad_productos }}</strong>
+                    </h2>
+
+                    <div class="productos-mini-lista">
+
+                        {% for p in productos %}
+
+                        <div class="producto-mini-card" onclick='abrirDetalleProducto(
+                        "{{ p["producto"] }}",
+                        "{{ p["estado_producto"] }}",
+                        "{{ p["variante"] or "" }}",
+                        "{{ p["margen"] or "" }}",
+                        "{{ p["monto"] or 0 }}",
+                        "{{ p["observaciones"] or "" }}"
+                    )'>
+
+                            <strong>{{ p["producto"] }}</strong>
+
+                            <span class="estado estado-{{ p['estado_producto'] }}">
+                                {{ p["estado_producto"] }}
+                            </span>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="ultima-interaccion">
+
+                {% if ultima_interaccion %}
+                Última interacción:
+                <strong>{{ ultima_interaccion["descripcion"] }}</strong>
+                <small>{{ ultima_fecha }}</small>
+                {% else %}
+                Sin interacciones registradas.
+                {% endif %}
+
+                <button type="button" class="timeline-toggle crm-action-btn"  onclick="toggleTimeline()">
+                    Ver interacciones
+                </button>
+
+                <div id="timelineBox" class="timeline-inline">
+
+                    {% if interacciones %}
+
+                    {% for i in interacciones %}
+
+                    <div class="timeline-event">
+                        <strong>{{ i["tipo_interaccion"] }}</strong>
+
+                        <span class="badge bg-primary">
+                            {{ i["resultado"] }}
+                        </span>
+
+                        <p class="mb-1">
+                            {{ i["descripcion"] }}
+                        </p>
+
+                        <small>
+                            Usuario: {{ i["usuario"] }} |
+                            Fecha: {{ i["fecha"] }}
+                        </small>
+                    </div>
+
+                    {% endfor %}
+
+                    {% else %}
+
+                    <p class="text-muted">
+                        Todavía no hay interacciones registradas.
+                    </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="panel-right-stack">
+
+            <div class="oportunidades-card">
+
+                <div class="productos-count">
+                    <span>Productos sugeridos disponibles:</span>
+                    <strong>{{ productos_para_ofrecer | length }}</strong>
+                </div>
+
+                <div class="mini-cards-grid">
+
+                    {% for producto in productos_para_ofrecer %}
+
+                    <form method="POST" action="{{ url_for('nueva_oportunidad', cliente_id=cliente['id']) }}"
+                        class="mini-product-card">
+
+                        <input type="hidden" name="producto" value="{{ producto }}">
+                        <input type="hidden" name="monto_estimado" value="0">
+                        <input type="hidden" name="descripcion" value="Oferta generada desde Panel 360">
+
+                        <h4>{{ producto }}</h4>
+                        <p>Disponible para ofrecer</p>
+
+                        <button class="ofrecer-btn">
+                            Ofrecer producto
+                        </button>
+
+                    </form>
+
+                    {% endfor %}
+
+                </div>
+
+                <div class="acciones-grid">
+
+                    <button type="button" class="crm-action-btn" onclick="abrirModal('modalAltaProducto')">
+                        Alta de producto
+                    </button>
+
+                    <div></div>
+
+                    <button type="button" class="crm-action-btn" onclick="abrirModal('modalInteraccion')">
+                        Registrar interacción
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="rentabilidad-card">
+
+                <h3>Rentabilidad del cliente</h3>
+
+                <div class="rentabilidad-grid">
+
+                    <div class="rentabilidad-item">
+
+                        <span>Ingresos</span>
+
+                        <strong>${{ ingresos_cliente }}</strong>
+
+                        <div class="kpi-trend neutral">
+                            ↑ +18%
+                        </div>
+
+                        <div class="kpi-line">
+                            <div class="kpi-fill ingresos"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="rentabilidad-item">
+
+                        <span>Costos</span>
+
+                        <strong>${{ costos_cliente }}</strong>
+
+                        <div class="kpi-trend warning">
+                            ↑ +9%
+                        </div>
+
+                        <div class="kpi-line">
+                            <div class="kpi-fill costos"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="rentabilidad-item">
+
+                        <span>Margen</span>
+
+                        <strong>$</strong>
+
+                        <div class="kpi-trend positiva">
+                            ↑ +21%
+                        </div>
+
+                        <div class="kpi-line">
+                            <div class="kpi-fill margen"></div>
+                        </div>
+
+                    </div>
+
+                    <div class="rentabilidad-item">
+
+                        <span>Nivel</span>
+
+                        <strong class="rentabilidad-badge alta">
+                            Alta
+                        </strong>
+
+                        <div class="kpi-trend premium">
+                            Cliente rentable
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="rentabilidad-insight">
+
+                    <span class="insight-icon">
+                        ⓘ
+                    </span>
+
+                    <p>
+                        Cliente rentable con margen positivo y crecimiento sostenido.
+                    </p>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if cliente["puede_reingresar"] == False %}
+    <div class="alert alert-danger">
+        Cliente bloqueado para nueva gestión comercial.
+    </div>
+    {% endif %}
+
+    <div id="modalAltaProducto" class="modal-crm">
+        <div class="modal-crm-content">
+
+            <button class="modal-close" type="button" onclick="cerrarModal('modalAltaProducto')">
+                x
+            </button>
+
+            <h3>Alta de producto</h3>
+
+            <form method="POST" action="{{ url_for('nuevo_producto', cliente_id=cliente['id']) }}">
+
+                <div class="mb-3">
+                    <label>Producto</label>
+                    <select name="producto" class="form-select">
+                        <option value="Cuenta">Cuenta</option>
+                        <option value="Tarjetas">Tarjetas</option>
+                        <option value="Préstamo Personal">Préstamo Personal</option>
+                        <option value="Inversiones">Inversiones</option>
+                        <option value="Seguros">Seguros</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Estado</label>
+                    <select name="estado_producto" class="form-select">
+                        <option value="activo">Activo</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="bloqueado">Bloqueado</option>
+                        <option value="baja">Baja</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Ingresos declarados</label>
+                    <input type="number" name="monto" class="form-control" value="0">
+                </div>
+
+                <div class="mb-3">
+                    <label>Observaciones</label>
+                    <textarea name="observaciones" class="form-control"></textarea>
+                </div>
+
+                <button class="btn btn-success w-100">
+                    Alta de producto
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+    <div id="modalInteraccion" class="modal-crm">
+        <div class="modal-crm-content">
+
+            <button class="modal-close" type="button" onclick="cerrarModal('modalInteraccion')">
+                x
+            </button>
+
+            <h3>Registrar interacción</h3>
+
+            <form method="POST" action="{{ url_for('nueva_interaccion', cliente_id=cliente['id']) }}">
+
+                <div class="mb-3">
+                    <label>Tipo</label>
+                    <select name="tipo_interaccion" class="form-select">
+                        <option value="llamada">Llamada</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="email">Email</option>
+                        <option value="visita">Visita</option>
+                        <option value="oferta">Oferta</option>
+                        <option value="reclamo">Reclamo</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Resultado</label>
+                    <select name="resultado" class="form-select">
+                        <option value="interesado">Interesado</option>
+                        <option value="no_interesado">No interesado</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="requiere_revision">Requiere revisión</option>
+                        <option value="oferta_enviada">Oferta enviada</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Descripción</label>
+                    <textarea name="descripcion" class="form-control" required></textarea>
+                </div>
+
+                <button class="btn btn-success w-100">
+                    Guardar interacción
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+    <div id="modalDetalleProducto" class="modal-crm">
+        <div class="modal-crm-content">
+
+            <button class="modal-close" type="button" onclick="cerrarModal('modalDetalleProducto')">
+                ×
+            </button>
+
+            <h3 id="detalleProductoTitulo"></h3>
+
+            <p><strong>Estado:</strong> <span id="detalleProductoEstado"></span></p>
+            <p><strong>Variante:</strong> <span id="detalleProductoVariante"></span></p>
+            <p><strong>Margen:</strong> <span id="detalleProductoMargen"></span></p>
+            <p><strong>Ingresos:</strong> $<span id="detalleProductoMonto"></span></p>
+            <p><strong>Observaciones:</strong> <span id="detalleProductoObs"></span></p>
+
+        </div>
+    </div>
+
+    <script>
+        function abrirModal(id) {
+            document.getElementById(id).style.display = "flex";
+        }
+
+        function cerrarModal(id) {
+            document.getElementById(id).style.display = "none";
+        }
+
+        function toggleTimeline() {
+            const timeline = document.getElementById("timelineBox");
+
+            if (timeline.style.display === "none" || timeline.style.display === "") {
+                timeline.style.display = "block";
+            } else {
+                timeline.style.display = "none";
+            }
+        }
+
+        function abrirDetalleProducto(producto, estado, variante, margen, monto, observaciones) {
+            document.getElementById("detalleProductoTitulo").innerText = producto;
+            document.getElementById("detalleProductoEstado").innerText = estado;
+            document.getElementById("detalleProductoVariante").innerText = variante || "-";
+            document.getElementById("detalleProductoMargen").innerText = margen || "-";
+            document.getElementById("detalleProductoMonto").innerText = monto || "0";
+            document.getElementById("detalleProductoObs").innerText = observaciones || "-";
+
+            abrirModal("modalDetalleProducto");
+        }
+
+        function abrirDetalleProductoDesdeCard(card) {
+            abrirDetalleProducto(
+                card.dataset.producto,
+                card.dataset.estado,
+                card.dataset.variante,
+                card.dataset.margen,
+                card.dataset.monto,
+                card.dataset.observaciones
+            );
+        }
+
+        function abrirDetalleProducto(
+            producto,
+            estado,
+            variante,
+            margen,
+            monto,
+            observaciones
+        ) {
+
+            document.getElementById("modalProductoTitulo").innerText = producto;
+            document.getElementById("modalEstado").innerText = estado;
+            document.getElementById("modalVariante").innerText = variante;
+            document.getElementById("modalMargen").innerText = margen;
+            document.getElementById("modalMonto").innerText = monto;
+            document.getElementById("modalObs").innerText = observaciones;
+
+            document.getElementById("modalProducto").style.display = "flex";
+        }
+
+        function cerrarModalProducto() {
+            document.getElementById("modalProducto").style.display = "none";
+        }
+
+        function abrirModalCliente() {
+            document.getElementById("modalCliente").style.display = "flex";
+        }
+
+        function cerrarModalCliente() {
+            document.getElementById("modalCliente").style.display = "none";
+        }
+
+        function abrirModalSaldo() {
+            document.getElementById("modalSaldo").style.display = "flex";
+        }
+
+        function cerrarModalSaldo() {
+            document.getElementById("modalSaldo").style.display = "none";
+        }
+
+    </script>
+
+    <div id="modalProducto" class="modal-overlay">
+
+        <div class="modal-contenido">
+
+            <div class="modal-header">
+                <h2 id="modalProductoTitulo">
+                    Producto
+                </h2>
+
+                <button onclick="cerrarModalProducto()">
+                    ✕
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <p>
+                    <strong>Estado:</strong>
+                    <span id="modalEstado"></span>
+                </p>
+
+                <p>
+                    <strong>Variante:</strong>
+                    <span id="modalVariante"></span>
+                </p>
+
+                <p>
+                    <strong>Margen:</strong>
+                    <span id="modalMargen"></span>
+                </p>
+
+                <p>
+                    <strong>Monto:</strong>
+                    $<span id="modalMonto"></span>
+                </p>
+
+                <p>
+                    <strong>Observaciones:</strong>
+                    <span id="modalObs"></span>
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="modalCliente" class="modal-overlay">
+
+        <div class="modal-contenido">
+
+            <div class="modal-header">
+
+                <h2>Información del cliente</h2>
+
+                <button onclick="cerrarModalCliente()">
+                    ✕
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <p>
+                    <strong>Cliente:</strong>
+                    {{ cliente["nombre"] }} {{ cliente["apellido"] }}
+                </p>
+
+                <p>
+                    <strong>DNI:</strong>
+                    {{ cliente["dni"] }}
+                </p>
+
+                <p>
+                    <strong>Estado:</strong>
+                    {{ cliente["estado_cliente"] }}
+                </p>
+
+                <p>
+                    <strong>Riesgo:</strong>
+                    {{ cliente["estado_riesgo"] }}
+                </p>
+
+                <p>
+                    <strong>Segmento:</strong>
+                    {{ segmento }}
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div id="modalSaldo" class="modal-overlay">
+
+        <div class="modal-contenido">
+
+            <div class="modal-header">
+
+                <h2>Saldo total</h2>
+
+                <button onclick="cerrarModalSaldo()">
+                    ✕
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <p>
+                    <strong>Total inversiones:</strong>
+                    ${{ total_inversiones }}
+                </p>
+
+                <p>
+                    <strong>Segmento actual:</strong>
+                    {{ segmento }}
+                </p>
+
+                <p>
+                    <strong>Margen estimado:</strong>
+                    {{ margen_cliente }}
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endblock %}

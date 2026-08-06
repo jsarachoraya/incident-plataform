@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="nuevo-cliente-wrapper">
+    <div class="nuevo-cliente-card">
+        <h2 class="nuevo-cliente-title">
+            Nuevo Cliente
+        </h2>
+        <form method="POST">
+
+            <!-- VALIDACIONES -->
+
+            <div class="form-section">
+                <h4>Validaciones externas</h4>
+                <div class="validaciones-grid">
+                    <a href="https://tramites.renaper.gob.ar/mi_ejemplar/" target="_blank" class="validacion-btn">
+                        RENAPER
+                    </a>
+                    <a href="https://www.bcra.gob.ar/BCRAyVos/Situacion_crediticia.asp" target="_blank"
+                        class="validacion-btn">
+                        BCRA
+                    </a>
+                    <a href="https://www.anses.gob.ar/consulta/constancia-de-cuil" target="_blank"
+                        class="validacion-btn">
+                        ANSES
+                    </a>
+                    <a href="https://seti.afip.gob.ar/padron-puc-constancia-internet/ConsultaConstanciaAction.do"
+                        target="_blank" class="validacion-btn">
+                        ARCA
+                    </a>
+                    <button class="validacion-btn disabled" disabled>
+                        Veraz
+                    </button>
+                    <button class="validacion-btn disabled" disabled>
+                        Nosis
+                    </button>
+                </div>
+            </div>
+
+            <!-- IDENTIFICACION -->
+
+            <div class="form-section">
+                <h4>Identificación</h4>
+                <div class="form-grid">
+                    <div class="form-group dni-group">
+                        <label>DNI / CUIL / CUIT</label>
+                        <input type="text" name="dni" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATOS -->
+
+            <div class="form-section">
+                <h4>Datos cliente / empresa</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre / Razón Social</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido</label>
+                        <input type="text" name="apellido" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Empresa / Actividad</label>
+                        <input type="text" name="empresa" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Sector</label>
+                        <input type="text" name="sector" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" name="telefono" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Domicilio</label>
+                            <input type="text" name="domicilio" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Empresa telefónica</label>
+                            <select name="empresa_telefonica" class="form-select">
+                                <option value="">Seleccionar</option>
+                                <option value="Personal">Personal</option>
+                                <option value="Claro">Claro</option>
+                                <option value="Movistar">Movistar</option>
+                                <option value="Tuenti">Tuenti</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    
+                </div>
+            </div>
+
+
+            <!-- ESTADO -->
+
+            <div class="form-section">
+                <h4>Estado comercial</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Estado Cliente</label>
+                        <select name="estado_cliente" class="form-select">
+                            <option value="prospecto">Prospecto</option>
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Estado Riesgo</label>
+                        <select name="estado_riesgo" class="form-select">
+                            <option value="bajo">Bajo</option>
+                            <option value="medio">Medio</option>
+                            <option value="alto">Alto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Prioridad</label>
+                        <select name="prioridad_cliente" class="form-select">
+                            <option value="baja">Baja</option>
+                            <option value="media">Media</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- OBSERVACIONES -->
+
+                <div class="form-section">
+                    <h4>Observaciones</h4>
+                    <div class="form-grid">
+                        <label>Motivo Riesgo</label>
+                    </div>
+                    <div>
+                        <textarea name="motivo_riesgo" class="form-control"></textarea>
+                    </div>
+                </div>
+
+                <!-- CHECK -->
+
+                <div class="form-check-wrapper">
+                    <input class="form-check-input" type="checkbox" name="puede_reingresar" checked>
+                    <label>
+                        Puede reingresar
+                    </label>
+                </div>
+
+                <!-- BOTON -->
+
+                <div class="submit-wrapper">
+                    <button type="submit" class="guardar-btn">
+                        Guardar Cliente
+                    </button>
+                </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

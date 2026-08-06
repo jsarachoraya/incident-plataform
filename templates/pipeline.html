@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="pipeline-title">Pipeline Comercial</h2>
+
+<div class="pipeline-board">
+
+    {% set columnas = [
+    ("Prospecto", prospectos),
+    ("Contactado", contactados),
+    ("Oferta enviada", ofertas),
+    ("Evaluación NPS", evaluacion_nps),
+    ("Cliente activo", activos),
+    ("Descartado", descartados)
+    ] %}
+
+    {% for titulo, oportunidades in columnas %}
+
+    <div class="pipeline-column">
+
+        <h3>{{ titulo }}</h3>
+
+        {% for o in oportunidades %}
+
+        <div class="pipeline-card">
+
+            <strong>{{ o["nombre"] }} {{ o["apellido"] }}</strong>
+
+            <p>{{ o["producto"] }}</p>
+
+            <small>DNI: {{ o["dni"] }}</small>
+
+            <form method="POST" action="{{ url_for('cambiar_etapa_oportunidad', oportunidad_id=o['id']) }}">
+
+                <select name="etapa">
+                    <option value="prospecto">Prospecto</option>
+                    <option value="contactado">Contactado</option>
+                    <option value="oferta_enviada">Oferta enviada</option>
+                    <option value="evaluacion_nps">Evaluación NPS</option>
+                    <option value="cliente_activo">Cliente activo</option>
+                    <option value="descartado">Descartado</option>
+                </select>
+
+                <button type="submit">
+                    Mover
+                </button>
+
+            </form>
+
+            <a href="{{ url_for('panel_comercial', cliente_id=o['cliente_id']) }}">
+                Ver panel
+            </a>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

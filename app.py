@@ -1,3 +1,4 @@
+from models.cliente import obtener_clientes, crear_cliente
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from flask import jsonify, send_file
@@ -13,8 +14,35 @@ from models.incidencia import (
     create_prorroga, get_prorrogas_by_incidencia_id, get_connection, filter_incidencias_activas,
     filter_incidencias_historicas, crate_usuarios_table, seed_admin,
 )
+from models.cliente import (
+    obtener_clientes, crear_cliente, buscar_cliente_por_dni, buscar_cliente_general
+)
+from models.interaccion import (
+    crear_interaccion, obtener_interacciones_por_cliente, registrar_evento_automatico
+)
+from models.cliente import (
+    obtener_clientes, crear_cliente, buscar_cliente_por_dni, obtener_cliente_por_id
+)
+from models.pipeline import actualizar_etapa_oportunidad, crear_oportunidad, obtener_oportunidades, obtener_oportunidades_por_etapa
+
+from models.producto_cliente import (
+    obtener_productos_cliente, crear_producto_cliente, cliente_tiene_producto, eliminar_producto_cliente
+)
 
 app = Flask (__name__)
+
+@app.context_processor
+def inject_sidebar_data():
+
+    clientes_abiertos = session.get("clientes_abiertos",[])
+    clientes_atendidos_hoy = session.get("clientes_atendidos_hoy", [])
+
+    return dict(
+        clientes_abiertos=clientes_abiertos,
+        cantidad_abiertos=len(clientes_abiertos),
+        clientes_atendidos_hoy=clientes_atendidos_hoy,
+        cantidad_atendidos_hoy=len(clientes_atendidos_hoy)
+    )
 
 app.secret_key = "super_secret_key"
 
@@ -28,7 +56,666 @@ crate_usuarios_table()
 
 seed_admin()
 
+
+
+
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////#
+###################################### GESTION DE CLIENTES ##############################################
+#\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
+
+
+
+
+CATALOGO_PRODUCTOS = [
+    "Cuenta",
+    "Tarjetas",
+    "Inversiones",
+    "Prestamo Presonal",
+    "Seguros"
+
+]
+
+def calcular_segmento(total_inversiones):
+
+    if total_inversiones >= 50000000:
+        return "Black"
+    
+    elif total_inversiones >= 10000000:
+        return "Platinum"
+    
+    elif total_inversiones >= 1000000:
+        return "Gold"
+    
+    return "Classic"
+
+def obtener_variante_tarjeta(segmento):
+
+    if segmento == "Black":
+        return "Tarjeta Black"
+    
+    elif segmento == "Platinum":
+        return "Tarjeta Platinum"
+    
+    elif segmento == "Gold":
+        return "Tarjeta Gold"
+    
+    return "Tarjeta Classic"
+
+
+def obtener_margen(segmento):
+
+    if segmento == "Black":
+        return "Margen Premium"
+    
+    elif segmento == "Platinum":
+        return "Margen Preferencial"
+    
+    return "Margen Estándar"
+
+
+def ontener_productos_elegibles(
+        cliente,
+        productos_actuales,
+        segmento
+):
+   
+
+    productos_cliente = [
+        p["producto"]
+        for p in productos_actuales
+    ]
+
+    elegibles = []
+
+    for producto in CATALOGO_PRODUCTOS:
+
+        if producto in productos_cliente:
+            continue
+
+        if (
+            cliente["estado_riesgo"] == "alto"
+            and producto == "Préstamo Personal"
+        ):
+            continue
+        
+        elegibles.append(producto)
+
+    return elegibles
+
+
+
+@app.route("/atencion-clientes")
+def atencion_clientes():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    return render_template("atencion_clientes.html")
+
+
+@app.route("/clientes/buscar-rapido", methods=["POST"])
+def buscar_cliente_rapido():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    valor = request.form["valor"].strip()
+
+    cliente = buscar_cliente_general(valor)
+
+    if cliente:
+        return redirect(
+            url_for(
+                "panel_comercial",
+                cliente_id=cliente["id"]
+            )
+        )
+
+    flash("Cliente no encontrado. Puede realizar alta rápida.", "warning")
+    return redirect(url_for("atencion_clientes"))
+
+
+@app.route(
+    "/clientes/<int:cliente_id>/productos/nuevo",
+    methods=["POST"]
+)
+def nuevo_producto(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    producto = request.form["producto"]
+
+    if cliente_tiene_producto(cliente_id, producto):
+
+        flash("El cliente ya posee este producto activo o pendiente", "warning")
+
+        return redirect(
+            url_for(
+                "panel_comercial",
+                cliente_id=cliente_id
+            )
+        )
+
+    productos_actuales = obtener_productos_cliente(cliente_id)
+
+    total_inversiones = sum(
+
+        p["monto"]
+        for p in productos_actuales
+        if p["producto"] == "Inversiones"
+
+    )
+
+    segmento = calcular_segmento(total_inversiones)
+
+    variante = None
+    margen = None
+
+    #  lógica inteligente tarjetas
+    if producto == "Tarjetas":
+
+        variante = obtener_variante_tarjeta(segmento)
+
+        margen = obtener_margen(segmento)
+
+    crear_producto_cliente(
+
+        cliente_id,
+
+        producto,
+
+        request.form["estado_producto"],
+
+        request.form["monto"],
+
+        request.form["observaciones"],
+
+        variante,
+
+        margen
+
+    )
+
+    flash(
+        "Producto agregado correctamente",
+        "success"
+    )
+
+    registrar_evento_automatico(
+        cliente_id,
+        f"Alta de producto: {producto} | Variante: {variante or '-'} | Margen: {margen or '-'}",
+        session["usuario"]
+    )
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente_id
+        )
+    )
+
+
+
+@app.route("/productos/<int:producto_id>/eliminar/<int:cliente_id>", methods=["POST"])
+def eliminar_producto(producto_id, cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    eliminar_producto_cliente(producto_id)
+
+    flash("Producto eliminado correctamente", "success")
+
+    registrar_evento_automatico(
+        cliente_id,
+        "Producto eliminado del cliente",
+        session["usuario"]
+    )
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente_id
+        )
+    )
+
+@app.route("/clientes")
+def clientes():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    clientes = obtener_clientes()
+
+    return render_template(
+        "clientes.html",
+        clientes=clientes
+    )
+
+
+@app.route("/clientes/evaluar", methods=["POST"])
+def evaluar_cliente():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    data = {
+
+        "dni": request.form["dni"],
+        "nombre": request.form["nombre"],
+        "apellido": request.form["apellido"],
+        "telefono": request.form["telefono"],
+        "email": request.form["email"]
+
+    }
+
+    #  BUSCAR SI YA EXISTE
+    cliente_existente = buscar_cliente_general(data["dni"])
+
+    if cliente_existente:
+
+        return redirect(
+            url_for(
+                "panel_comercial",
+                cliente_id=cliente_existente["id"]
+            )
+        )
+
+    #  SI NO EXISTE → CREAR
+    cliente_id = crear_cliente(data)
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente_id
+        )
+    )
+    
+    # CLIENTE NUEVO
+
+    data = {
+        "dni": dni,
+        "nombre": request.form.get("nombre", ""),
+        "apellido": request.form.get("apellido", ""),
+        "empresa": "",
+        "email": request.form.get("email", ""),
+        "telefono": request.form.get("telefono", ""),
+        "sector": "",
+        "estado_cliente": "prospecto",
+        "estado_riesgo": "bajo",
+        "motivo_riesgo": "",
+        "puede_reingresar": True,
+        "prioridad_cliente": "media",
+        "notas": "",
+    }
+
+    crear_cliente(data)
+
+    cliente = buscar_cliente_por_dni(dni)
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente["id"]
+        )
+    )
+
+
+@app.route("/clientes/<int:cliente_id>/panel-comercial")
+def panel_comercial(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    cliente = obtener_cliente_por_id(cliente_id)
+
+    if "clientes_abiertos" not in session:
+        session["clientes_abiertos"] = []
+
+    cliente_abierto = {
+        "id": cliente_id,
+        "nombre": f'{cliente["nombre"]} {cliente["apellido"]}'
+    }
+
+    if "clientes_abiertos" not in session:
+        session["clientes_abiertos"] = []
+
+    if cliente_abierto not in session["clientes_abiertos"]:
+        session["clientes_abiertos"].append(cliente_abierto)
+
+    if "clientes_atendidos_hoy" not in session:
+        session["clientes_atendidos_hoy"] = []
+
+    if cliente_abierto not in session["clientes_atendidos_hoy"]:
+        session["clientes_atendidos_hoy"].append(cliente_abierto)
+
+    session.modified = True
+
+    productos = obtener_productos_cliente(cliente_id)
+    interacciones = obtener_interacciones_por_cliente(cliente_id)
+
+
+    # PRODUCTOS ACTUALES DEL CLIENTE
+
+    productos_actuales = [
+        p["producto"]
+        for p in productos
+    ]
+
+    # Productos para ofrecer
+    productos_para_ofrecer = [
+        producto for producto in CATALOGO_PRODUCTOS
+        if producto not in productos_actuales
+    ]
+
+    # Si el cliente es de riesgo alto, no ofrecer préstamo
+    if cliente["estado_riesgo"] == "alto":
+        productos_para_ofrecer = [
+            producto for producto in productos_para_ofrecer
+            if producto != "Prestamo Personal"
+        ]
+
+    # Total inversiones / saldo
+    total_inversiones = sum(
+        float(p.get("monto", 0) or 0)
+        for p in productos
+        if p["producto"] == "Inversiones"
+    )
+
+    # Segmento calculado por saldo
+    segmento = calcular_segmento(total_inversiones)
+
+    # Reglas comerciales según segmento
+    variante_tarjeta = obtener_variante_tarjeta(segmento)
+    margen_cliente = obtener_margen(segmento)
+
+    # KPIs
+    cantidad_productos = len(productos)
+
+    oportunidades_abiertas = len([
+        o for o in obtener_oportunidades()
+        if int(o["cliente_id"]) == int(cliente_id)
+    ])
+
+    # Última interacción
+    ultima_interaccion = interacciones[0] if interacciones else None
+    ultima_fecha = None
+
+    if ultima_interaccion:
+        ultima_fecha = ultima_interaccion["fecha"].strftime(
+            "%d/%m/%Y %H:%M"
+        )
+
+    clientes_abiertos = []
+
+    cliente_abierto = {
+        "id": cliente_id,
+        "nombre": f'{cliente["nombre"]} {cliente["apellido"]}'
+    }
+
+    clientes_abiertos.append(cliente_abierto)
+
+    session["clientes_abiertos"] = clientes_abiertos
+    session.modified = True
+
+    return render_template(
+        "panel_comercial.html",
+        cliente=cliente,
+        productos=productos,
+        interacciones=interacciones,
+        productos_para_ofrecer=productos_para_ofrecer,
+        segmento=segmento,
+        total_inversiones=total_inversiones,
+        variante_tarjeta=variante_tarjeta,
+        margen_cliente=margen_cliente,
+        cantidad_productos=cantidad_productos,
+        oportunidades_abiertas=oportunidades_abiertas,
+        ultima_interaccion=ultima_interaccion,
+        ultima_fecha=ultima_fecha,
+        clientes_abiertos=clientes_abiertos,
+        cliente_abierto=cliente_abierto,
+    )
+
+
+@app.route("/clientes/<int:cliente_id>/archivar", methods=["GET", "POST"])
+def archivar_cliente(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE clientes
+        SET visible_en_clientes = FALSE
+        WHERE id = %s
+    """, (cliente_id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("Cliente archivado correctamente", "success")
+
+    return redirect(url_for("clientes"))
+
+
+@app.route("/clientes/<int:cliente_id>/info")
+def detalle_cliente_info(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    cliente = obtener_cliente_por_id(cliente_id)
+
+    return render_template(
+        "cliente_info.html",
+        cliente=cliente
+    )
+
+
+@app.route("/clientes/<int:cliente_id>/saldo")
+def detalle_cliente_saldo(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    productos = obtener_productos_cliente(cliente_id)
+
+    return render_template(
+        "cliente_saldo.html",
+        productos=productos
+    )
+
+
+@app.route("/productos/<int:producto_id>")
+def detalle_producto_cliente(producto_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    return f"Detalle del producto {producto_id}"
+
+#REVISAR USO#
+@app.route("/clientes/<int:cliente_id>/productos")
+def detalle_cliente_productos(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    productos = obtener_productos_cliente(cliente_id)
+
+    return render_template(
+        "cliente_productos.html",
+        productos=productos
+    )
+
+
+@app.route("/clientes/<int:cliente_id>/cerrar-ficha")
+def cerrar_ficha(cliente_id):
+
+    clientes_abiertos = session.get("clientes_abiertos", [])
+
+    clientes_abiertos = [
+        c for c in clientes_abiertos
+        if int(c["id"])!= int(cliente_id)
+    ]
+
+    session["clientes_abiertos"] = clientes_abiertos
+    session.modified = True
+
+    flash("Ficha cerrada correctamente", "success")
+
+    return redirect(url_for("atencion_clientes"))
+
+
+
+@app.route("/clientes/<int:cliente_id>/interacciones/nueva", methods=["POST"])
+def nueva_interaccion(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    crear_interaccion(
+        cliente_id,
+        request.form["tipo_interaccion"],
+        request.form["descripcion"],
+        request.form["resultado"],
+        session["usuario"]
+    )
+
+    flash("Interaccion registrada correctamente", "success")
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente_id
+        )
+    )
+
+
+@app.route("/clientes/nuevo", methods=["GET", "POST"])
+def nuevo_cliente():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    if session["rol"] not in ["admin", "operador"]:
+        flash("No tiene permisos para crear clientes", "warning")
+        return redirect(url_for("clientes"))
+    
+    if request.method == "POST":
+
+        data = {
+            "dni": request.form["dni"],
+            "nombre": request.form["nombre"],
+            "apellido": request.form.get("apellido", ""),
+            "empresa": request.form.get("empresa", ""),
+            "email": request.form.get("email", ""),
+            "domicilio": request.form.get("domicilio", ""),
+            "telefono": request.form.get("telefono", ""),
+            "empresa_telefonica": request.form.get("empresa_telefonica", ""),
+            "sector": request.form.get("sector", ""),
+            "estado_cliente": request.form.get("estado_cliente", "prospecto"),
+            "estado_riesgo": request.form.get("estado_riesgo", "sin_evaluar"),
+            "motivo_riesgo": request.form.get("motivo_riesgo", ""),
+            "puede_reingresar": request.form.get("puede_reingresar") == "on",
+            "prioridad_cliente": request.form.get("prioridad_cliente", "media"),
+            "notas": request.form.get("notas", ""),
+        }
+
+        crear_cliente(data)
+
+        flash("Cliente creado correctamente", "success")
+        return redirect(url_for("clientes"))
+    
+    return render_template("cliente_form.html")
+
+
+@app.route("/pipeline")
+def pipeline():
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+    
+    prospectos = obtener_oportunidades_por_etapa("prospecto")
+    contactados = obtener_oportunidades_por_etapa("contactado")
+    ofertas = obtener_oportunidades_por_etapa("oferta_enviada")
+    evaluacion_nps = obtener_oportunidades_por_etapa("evaluacion_nps")
+    activos = obtener_oportunidades_por_etapa("cliente_activo")
+    descartados = obtener_oportunidades_por_etapa("descartado")
+
+    return render_template(
+        "pipeline.html",
+        prospectos=prospectos,
+        contactados=contactados,
+        ofertas=ofertas,
+        evaluacion_nps=evaluacion_nps,
+        activos=activos,
+        descartados=descartados
+    )
+
+
+@app.route("/pipeline/oportunidad/<int:oportunidad_id>/etapa", methods=["POST"])
+def cambiar_etapa_oportunidad(oportunidad_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    nueva_etapa = request.form["etapa"]
+
+    actualizar_etapa_oportunidad(
+        oportunidad_id,
+        nueva_etapa
+    )
+
+    flash("Etapa de la oportunidad actualizada correctamente", "success")
+    return redirect(url_for("pipeline"))
+
+
+@app.route("/clientes/<int:cliente_id>/oportunidades/nueva", methods=["POST"])
+def nueva_oportunidad(cliente_id):
+
+    if "usuario" not in session:
+        return redirect(url_for("login"))
+
+    producto = request.form["producto"]
+    monto_estimado = request.form.get("monto_estimado", 0)
+    
+    crear_oportunidad(
+        cliente_id,
+        request.form["producto"],
+        request.form.get("monto_estimado", 0),
+        request.form.get("descripcion", ""),
+        session["usuario"]
+    )
+
+    flash("Oportunidad creada correctamente", "success")
+
+    registrar_evento_automatico(
+        cliente_id,
+        f"Oportunidad comercial creada: {request.form['producto']}",
+        session["usuario"]
+    )
+
+    return redirect(
+        url_for(
+            "panel_comercial",
+            cliente_id=cliente_id
+        )
+    )
+
+
+
+
+
+
+
+
+#///////////////////////////////////////////////////////////////////////////////////////////////////////#
+#################################### MODULO GESTION DE INCIDENCIAS #####################################
 #################################### DESPLEGABLE RESUMEN OPERATIVO ######################################
 #\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\#
 
@@ -197,7 +884,7 @@ def login():
             session["usuario"] = usuario["username"]
             session["rol"] = usuario["rol"]
 
-            return redirect(url_for("index"))
+            return redirect(url_for("atencion_clientes"))
         
         return render_template(
             "login.html",
