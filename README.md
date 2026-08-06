@@ -38,11 +38,11 @@ Plataforma de gestión comercial y operativa desarrollada en Flask y PostgreSQL.
 
 ### Panel de atención
 
-![Panel de atencion](screenshots/panel_de_atencion.png)
+![Panel_de_ atencion](screenshots/panel_de_atencion.png)
 
 ### Panel ingreso de datos
 
-![Panel ingreso de datos](screenshots/panel_ingreso_datos.png)
+![Panel_ingreso_datos](screenshots/panel_ingreso_datos.png)
 
 ### Dashboard
 
